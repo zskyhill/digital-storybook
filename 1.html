@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态绘本</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 桌面版样式 */
+        .desktop-version {
+            display: none;
+            width: 90%;
+            max-width: 1000px;
+            height: 70vh;
+            margin: 20px auto;
+            perspective: 2000px;
+        }
+
+        .book-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .page {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            overflow: auto;
+            transition: transform 0.8s ease;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+
+        .left-page {
+            left: 0;
+            border-radius: 5px 0 0 5px;
+            transform-origin: right center;
+            z-index: 1;
+        }
+
+        .right-page {
+            left: 50%;
+            border-radius: 0 5px 5px 0;
+            transform-origin: left center;
+            z-index: 2;
+        }
+
+        /* 移动版样式 - 高度优化 */
+        .mobile-version {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+            height: 75vh; /* 调整为视口的75% */
+            max-height: 600px; /* 设置最大高度 */
+            position: relative;
+            overflow: hidden;
+            margin: 20px auto;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .mobile-page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: white;
+            padding: 15px; /* 减少内边距 */
+            overflow: auto;
+            transition: transform 0.5s ease;
+        }
+
+        /* 通用样式 */
+        .page-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px; /* 减少间距 */
+            color: #333;
+            text-align: center;
+        }
+
+        .page-image {
+            width: 100%;
+            max-height: 50%; /* 限制图片高度 */
+            object-fit: contain;
+            margin: 5px 0; /* 减少间距 */
+            border-radius: 5px;
+        }
+
+        .page-text {
+            margin-top: 10px; /* 减少间距 */
+            line-height: 1.5;
+            text-align: center;
+            font-size: 1rem; /* 减小字体 */
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 15px; /* 减少间距 */
+        }
+
+        button {
+            padding: 8px 15px; /* 减小按钮 */
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem; /* 减小字体 */
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .page-indicator {
+            font-size: 0.9rem; /* 减小字体 */
+            color: #555;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 响应式设计 */
+        @media (min-width: 768px) {
+            .desktop-version {
+                display: block;
+            }
+            .mobile-version {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .desktop-version {
+                display: none !important;
+            }
+            .mobile-version {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 style="margin-bottom: 15px; font-size: 1.8rem;">我的动态绘本</h1>
+    
+    <!-- 桌面版结构 -->
+    <div class="desktop-version">
+        <div class="book-container">
+            <!-- 第1组 -->
+            <div class="page left-page" data-page="1">
+                <div class="page-content">
+                    <h2 class="page-title">封面</h2>
+                    <img src="https://via.placeholder.com/800x600/FFD700/000000?text=Book+Cover" class="page-image">
+                    <p class="page-text">欢迎阅读这本动态绘本</p>
+                </div>
+            </div>
+            <div class="page right-page" data-page="1">
+                <div class="page-content">
+                    <h2 class="page-title">第一页</h2>
+                    <img src="https://via.placeholder.com/800x600/F5F5DC/000000?text=Page+1" class="page-image">
+                    <p class="page-text">这是第一页的内容</p>
+                </div>
+            </div>
+            
+            <!-- 第2组 -->
+            <div class="page left-page hidden" data-page="2">
+                <div class="page-content">
+                    <h2 class="page-title">第二页</h2>
+                    <img src="https://via.placeholder.com/800x600/E6E6FA/000000?text=Page+2" class="page-image">
+                    <p class="page-text">这是第二页的内容</p>
+                </div>
+            </div>
+            <div class="page right-page hidden" data-page="2">
+                <div class="page-content">
+                    <h2 class="page-title">第三页</h2>
+                    <img src="https://via.placeholder.com/800x600/E0FFFF/000000?text=Page+3" class="page-image">
+                    <p class="page-text">这是第三页的内容</p>
+                </div>
+            </div>
+            
+            <!-- 第3组 -->
+            <div class="page left-page hidden" data-page="3">
+                <div class="page-content">
+                    <h2 class="page-title">第四页</h2>
+                    <img src="https://via.placeholder.com/800x600/F0FFF0/000000?text=Page+4" class="page-image">
+                    <p class="page-text">这是第四页的内容</p>
+                </div>
+            </div>
+            <div class="page right-page hidden" data-page="3">
+                <div class="page-content">
+                    <h2 class="page-title">第五页</h2>
+                    <img src="https://via.placeholder.com/800x600/FFF0F5/000000?text=Page+5" class="page-image">
+                    <p class="page-text">这是第五页的内容</p>
+                </div>
+            </div>
+            
+            <!-- 第4组 -->
+            <div class="page left-page hidden" data-page="4">
+                <div class="page-content">
+                    <h2 class="page-title">第六页</h2>
+                    <img src="https://via.placeholder.com/800x600/F5F5F5/000000?text=Page+6" class="page-image">
+                    <p class="page-text">这是第六页的内容</p>
+                </div>
+            </div>
+            <div class="page right-page hidden" data-page="4">
+                <div class="page-content">
+                    <h2 class="page-title">第七页</h2>
+                    <img src="https://via.placeholder.com/800x600/F0F8FF/000000?text=Page+7" class="page-image">
+                    <p class="page-text">这是第七页的内容</p>
+                </div>
+            </div>
+            
+            <!-- 第5组 -->
+            <div class="page left-page hidden" data-page="5">
+                <div class="page-content">
+                    <h2 class="page-title">第八页</h2>
+                    <img src="https://via.placeholder.com/800x600/F8F8FF/000000?text=Page+8" class="page-image">
+                    <p class="page-text">这是第八页的内容</p>
+                </div>
+            </div>
+            <div class="page right-page hidden" data-page="5">
+                <div class="page-content">
+                    <h2 class="page-title">封底</h2>
+                    <img src="https://via.placeholder.com/800x600/FFE4E1/000000?text=The+End" class="page-image">
+                    <p class="page-text">感谢阅读这本绘本</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动版结构 -->
+    <div class="mobile-version">
+        <!-- 封面 -->
+        <div class="mobile-page" data-page="0" style="transform: translateX(0);">
+            <div class="page-content">
+                <h2 class="page-title">封面</h2>
+                <img src="https://via.placeholder.com/800x600/FFD700/000000?text=Book+Cover" class="page-image">
+                <p class="page-text">欢迎阅读这本动态绘本</p>
+            </div>
+        </div>
+        
+        <!-- 内页 -->
+        <div class="mobile-page" data-page="1" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第一页</h2>
+                <img src="https://via.placeholder.com/800x600/F5F5DC/000000?text=Page+1" class="page-image">
+                <p class="page-text">这是第一页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="2" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第二页</h2>
+                <img src="https://via.placeholder.com/800x600/E6E6FA/000000?text=Page+2" class="page-image">
+                <p class="page-text">这是第二页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="3" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第三页</h2>
+                <img src="https://via.placeholder.com/800x600/E0FFFF/000000?text=Page+3" class="page-image">
+                <p class="page-text">这是第三页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="4" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第四页</h2>
+                <img src="https://via.placeholder.com/800x600/F0FFF0/000000?text=Page+4" class="page-image">
+                <p class="page-text">这是第四页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="5" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第五页</h2>
+                <img src="https://via.placeholder.com/800x600/FFF0F5/000000?text=Page+5" class="page-image">
+                <p class="page-text">这是第五页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="6" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第六页</h2>
+                <img src="https://via.placeholder.com/800x600/F5F5F5/000000?text=Page+6" class="page-image">
+                <p class="page-text">这是第六页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="7" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第七页</h2>
+                <img src="https://via.placeholder.com/800x600/F0F8FF/000000?text=Page+7" class="page-image">
+                <p class="page-text">这是第七页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="8" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">第八页</h2>
+                <img src="https://via.placeholder.com/800x600/F8F8FF/000000?text=Page+8" class="page-image">
+                <p class="page-text">这是第八页的内容</p>
+            </div>
+        </div>
+        
+        <div class="mobile-page" data-page="9" style="transform: translateX(100%);">
+            <div class="page-content">
+                <h2 class="page-title">封底</h2>
+                <img src="https://via.placeholder.com/800x600/FFE4E1/000000?text=The+End" class="page-image">
+                <p class="page-text">感谢阅读这本绘本</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 控制按钮 -->
+    <div class="controls">
+        <button id="prevBtn">上一页</button>
+        <div class="page-indicator">
+            <span id="currentPage">1</span>/<span id="totalPages">5</span>
+        </div>
+        <button id="nextBtn">下一页</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设备检测
+            function isMobile() {
+                return window.innerWidth <= 767;
+            }
+            
+            // 初始化变量
+            let currentPage = 0;
+            let totalPages = 0;
+            let pages = [];
+            let startX = 0;
+            let isMoving = false;
+            
+            // 初始化绘本
+            function initStorybook() {
+                if (isMobile()) {
+                    // 移动版初始化
+                    document.querySelector('.desktop-version').classList.add('hidden');
+                    document.querySelector('.mobile-version').classList.remove('hidden');
+                    pages = document.querySelectorAll('.mobile-page');
+                    totalPages = pages.length - 1; // 减去封面
+                    
+                    // 更新页面指示器
+                    document.getElementById('totalPages').textContent = totalPages;
+                    
+                    // 显示封面
+                    goToPage(0);
+                } else {
+                    // 桌面版初始化
+                    document.querySelector('.mobile-version').classList.add('hidden');
+                    document.querySelector('.desktop-version').classList.remove('hidden');
+                    const desktopPages = document.querySelectorAll('.desktop-version .page');
+                    totalPages = Math.ceil(desktopPages.length / 2);
+                    
+                    // 更新页面指示器
+                    document.getElementById('totalPages').textContent = totalPages;
+                    
+                    // 显示第一组页面
+                    goToPage(1);
+                }
+            }
+            
+            // 跳转到指定页面
+            function goToPage(pageNum) {
+                if (isMobile()) {
+                    // 移动版页面切换
+                    if (pageNum < 0 || pageNum >= pages.length) return;
+                    
+                    // 更新当前页码
+                    currentPage = pageNum;
+                    document.getElementById('currentPage').textContent = currentPage || 1;
+                    
+                    // 移动所有页面
+                    pages.forEach((page, index) => {
+                        if (index < currentPage) {
+                            page.style.transform = 'translateX(-100%)';
+                        } else if (index > currentPage) {
+                            page.style.transform = 'translateX(100%)';
+                        } else {
+                            page.style.transform = 'translateX(0)';
+                        }
+                    });
+                    
+                    // 更新按钮状态
+                    updateButtonState();
+                } else {
+                    // 桌面版页面切换
+                    if (pageNum < 1 || pageNum > totalPages) return;
+                    
+                    // 隐藏所有页面
+                    document.querySelectorAll('.desktop-version .page').forEach(page => {
+                        page.classList.add('hidden');
+                    });
+                    
+                    // 显示当前组页面
+                    document.querySelector(`.left-page[data-page="${pageNum}"]`).classList.remove('hidden');
+                    document.querySelector(`.right-page[data-page="${pageNum}"]`).classList.remove('hidden');
+                    
+                    // 更新当前页码
+                    currentPage = pageNum;
+                    document.getElementById('currentPage').textContent = currentPage;
+                    
+                    // 更新按钮状态
+                    updateButtonState();
+                }
+            }
+            
+            // 更新按钮状态
+            function updateButtonState() {
+                if (isMobile()) {
+                    document.getElementById('prevBtn').disabled = currentPage === 0;
+                    document.getElementById('nextBtn').disabled = currentPage === pages.length - 1;
+                } else {
+                    document.getElementById('prevBtn').disabled = currentPage === 1;
+                    document.getElementById('nextBtn').disabled = currentPage === totalPages;
+                }
+            }
+            
+            // 翻页动画 - 修正了翻页方向
+            function animatePageTurn(direction) {
+                if (isMobile()) {
+                    // 移动版滑动效果
+                    const newPage = direction === 'next' ? currentPage + 1 : currentPage - 1;
+                    goToPage(newPage);
+                } else {
+                    // 桌面版3D翻页效果 - 修正方向
+                    const leftPage = document.querySelector(`.left-page[data-page="${currentPage}"]`);
+                    const rightPage = document.querySelector(`.right-page[data-page="${currentPage}"]`);
+                    
+                    if (direction === 'next') {
+                        // 下一页：右页向左翻转
+                        rightPage.style.transform = 'rotateY(-180deg)';
+                        setTimeout(() => {
+                            goToPage(currentPage + 1);
+                            rightPage.style.transform = '';
+                        }, 800);
+                    } else {
+                        // 上一页：左页向右翻转
+                        leftPage.style.transform = 'rotateY(180deg)';
+                        setTimeout(() => {
+                            goToPage(currentPage - 1);
+                            leftPage.style.transform = '';
+                        }, 800);
+                    }
+                }
+            }
+            
+            // 事件监听
+            document.getElementById('prevBtn').addEventListener('click', function() {
+                animatePageTurn('prev');
+            });
+            
+            document.getElementById('nextBtn').addEventListener('click', function() {
+                animatePageTurn('next');
+            });
+            
+            // 移动端触摸事件
+            if (isMobile()) {
+                const mobileBook = document.querySelector('.mobile-version');
+                
+                mobileBook.addEventListener('touchstart', function(e) {
+                    startX = e.touches[0].clientX;
+                    isMoving = false;
+                }, { passive: true });
+                
+                mobileBook.addEventListener('touchmove', function(e) {
+                    if (!isMoving && Math.abs(startX - e.touches[0].clientX) > 10) {
+                        isMoving = true;
+                    }
+                }, { passive: true });
+                
+                mobileBook.addEventListener('touchend', function(e) {
+                    if (isMoving) {
+                        const diff = startX - e.changedTouches[0].clientX;
+                        if (diff > 50) {
+                            // 向左滑动 - 下一页
+                            animatePageTurn('next');
+                        } else if (diff < -50) {
+                            // 向右滑动 - 上一页
+                            animatePageTurn('prev');
+                        }
+                    }
+                }, { passive: true });
+            }
+            
+            // 窗口大小改变时重新初始化
+            window.addEventListener('resize', function() {
+                initStorybook();
+            });
+            
+            // 初始化绘本
+            initStorybook();
+        });
+    </script>
+</body>
+</html>
